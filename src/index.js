@@ -1,66 +1,37 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import { ApolloServer, gql } from 'apollo-server-express';
+import { ApolloServer } from 'apollo-server-express';
+
+// local module
 import db from './db.js';
+import typeDefs from './schema.js';
+import resolvers from './resolvers/index.js';
 import models from './models/index.js';
 
+// set env
 dotenv.config();
 
-const app = express();
 const PORT = process.env.PORT || 4000;
 const DB_HOST = process.env.DB_HOST;
 
+const app = express();
+
 db.connect(DB_HOST);
-
-const typeDefs = gql`
-  type Query {
-    hello: String!
-    notes: [Note]!
-    note(id: ID!): Note!
-  }
-
-  type Mutation {
-    newNote(
-      content: String!
-      author: String!
-    ): Note!
-  }
-
-  type Note {
-    id: ID!
-    content: String!
-    author: String!
-  }
-`;
-
-const resolvers = {
-  Query: {
-    hello: () => 'Hello World!',
-    notes: async () => await models.Note.find(),
-    note: async (parent, args) => await models.Note.findById(args.id),
-  },
-  Mutation: {
-    newNote: async (parent, args) => {
-      return await models.Note.create({
-        content: args.content,
-        author: args.author
-      });
-    }
-  },
-};
 
 const server = new ApolloServer({
   typeDefs,
-  resolvers
+  resolvers,
+  context(){
+    // add models in context
+    return { models };
+  },
 });
 
 await server.start();
 server.applyMiddleware({
   app,
-  path: '/api'
+  path: '/api',
 });
-
-app.get('/', (req, res) => res.send('Hello World'));
 
 app.listen(PORT, () =>
   console.log(
