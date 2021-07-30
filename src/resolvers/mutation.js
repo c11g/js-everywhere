@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { AuthenticationError } from 'apollo-server-express';
@@ -7,12 +8,14 @@ import gravatar from '../utils/gravatar.js';
 dotenv.config();
 
 export default {
-  newNote: async (parent, args, { models }) => (
-    await models.Note.create({
+  newNote: async (parent, args, { models, user }) => {
+    if (!user) throw new AuthenticationError('You must be signed in to create a note');
+    
+    return await models.Note.create({
       content: args.content,
-      author: args.author
+      author: mongoose.Types.ObjectId(user.id)
     })
-  ),
+  },
   updateNote: async (parent, { id, content }, { models }) => (
     await models.Note.findOneAndUpdate(
       { _id: id },
